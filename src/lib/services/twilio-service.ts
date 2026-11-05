@@ -16,7 +16,7 @@ export function getTwilioConfig(): TwilioConfig {
     apiKeySid: process.env.TWILIO_API_KEY_SID || "",
     apiKeySecret: process.env.TWILIO_API_KEY_SECRET || "",
     phoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
-    appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    appUrl: process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   };
 }
 
