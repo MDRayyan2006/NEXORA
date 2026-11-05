@@ -18,6 +18,10 @@ async function handleWelcome(req: NextRequest) {
   const language = searchParams.get("lang") || "en";
   const studentName = searchParams.get("name") || "Student";
 
+  const baseUrl = req.nextUrl.origin.startsWith("http") && !req.nextUrl.origin.includes("localhost")
+    ? req.nextUrl.origin
+    : (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://physicianly-feracious-ted.ngrok-free.dev");
+
   const twiml = new VoiceResponse();
 
   const langMap: Record<string, string> = {
@@ -59,7 +63,7 @@ async function handleWelcome(req: NextRequest) {
       const gather = twiml.gather({
         numDigits: 1,
         timeout: 12,
-        action: `/api/twilio/voice/gather?sessionId=${session.sessionId}&step=1&correct=${q1.correctDigit}&topic=${encodeURIComponent(topic)}&lang=${language}`,
+        action: `${baseUrl}/api/twilio/voice/gather?sessionId=${session.sessionId}&step=1&correct=${q1.correctDigit}&topic=${encodeURIComponent(topic)}&lang=${language}`,
         method: "POST",
       });
 
@@ -71,7 +75,7 @@ async function handleWelcome(req: NextRequest) {
         "We did not receive any keypad input. Moving to the next question."
       );
       twiml.redirect(
-        `/api/twilio/voice/gather?sessionId=${session.sessionId}&step=1&correct=${q1.correctDigit}&topic=${encodeURIComponent(topic)}&lang=${language}&timeout=true`
+        `${baseUrl}/api/twilio/voice/gather?sessionId=${session.sessionId}&step=1&correct=${q1.correctDigit}&topic=${encodeURIComponent(topic)}&lang=${language}&timeout=true`
       );
     }
   } catch (err: any) {

@@ -14,6 +14,10 @@ export async function POST(req: NextRequest) {
   const language = searchParams.get("lang") || "en";
   const scoreSoFar = parseInt(searchParams.get("score") || "0", 10);
 
+  const baseUrl = req.nextUrl.origin.startsWith("http") && !req.nextUrl.origin.includes("localhost")
+    ? req.nextUrl.origin
+    : (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://physicianly-feracious-ted.ngrok-free.dev");
+
   // Twilio sends form data: Digits
   let pressedDigit = "";
   try {
@@ -67,7 +71,7 @@ export async function POST(req: NextRequest) {
       const gather = twiml.gather({
         numDigits: 1,
         timeout: 12,
-        action: `/api/twilio/voice/gather?sessionId=${sessionId}&step=2&correct=${q2.correctDigit}&topic=${encodeURIComponent(topic)}&lang=${language}&score=${newScore}`,
+        action: `${baseUrl}/api/twilio/voice/gather?sessionId=${sessionId}&step=2&correct=${q2.correctDigit}&topic=${encodeURIComponent(topic)}&lang=${language}&score=${newScore}`,
         method: "POST",
       });
       gather.say({ voice, language: langCode }, q2SpokenText);
@@ -75,7 +79,7 @@ export async function POST(req: NextRequest) {
       // Timeout fallback
       twiml.say({ voice, language: langCode }, "We did not receive your keypad answer for question 2.");
       twiml.redirect(
-        `/api/twilio/voice/gather?sessionId=${sessionId}&step=2&correct=${q2.correctDigit}&topic=${encodeURIComponent(topic)}&lang=${language}&score=${newScore}&timeout=true`
+        `${baseUrl}/api/twilio/voice/gather?sessionId=${sessionId}&step=2&correct=${q2.correctDigit}&topic=${encodeURIComponent(topic)}&lang=${language}&score=${newScore}&timeout=true`
       );
     } else {
       twiml.say(

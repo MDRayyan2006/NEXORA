@@ -82,7 +82,8 @@ export async function POST(req: NextRequest) {
         body.phoneNumber || storedSchedule.phoneNumber,
         body.topic || storedSchedule.topic,
         body.language || storedSchedule.language,
-        body.studentName || storedSchedule.studentName
+        body.studentName || storedSchedule.studentName,
+        req.nextUrl.origin
       );
 
       return NextResponse.json({

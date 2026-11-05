@@ -9,14 +9,38 @@ export interface TwilioConfig {
   appUrl: string;
 }
 
-export function getTwilioConfig(): TwilioConfig {
+export function getResolvedAppUrl(customOrigin?: string): string {
+  // 1. If active request origin provided and is a public HTTPS URL, use it
+  if (customOrigin && customOrigin.startsWith("https://") && !customOrigin.includes("localhost")) {
+    return customOrigin;
+  }
+
+  // 2. Explicitly configured APP_URL or NEXT_PUBLIC_APP_URL
+  const envUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "";
+  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("your-nexora-app")) {
+    return envUrl.startsWith("http") ? envUrl : `https://${envUrl}`;
+  }
+
+  // 3. Vercel automatically injected system variables (present on every Vercel build & serverless function)
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  // 4. Default active public tunnel
+  return "https://physicianly-feracious-ted.ngrok-free.dev";
+}
+
+export function getTwilioConfig(customOrigin?: string): TwilioConfig {
   return {
     accountSid: process.env.TWILIO_ACCOUNT_SID || "",
     authToken: process.env.TWILIO_AUTH_TOKEN || "",
     apiKeySid: process.env.TWILIO_API_KEY_SID || "",
     apiKeySecret: process.env.TWILIO_API_KEY_SECRET || "",
     phoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
-    appUrl: process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    appUrl: getResolvedAppUrl(customOrigin),
   };
 }
 
@@ -55,9 +79,11 @@ export async function triggerOutboundCall(
   toPhoneNumber: string,
   topic: string = "Percentages & Ratios",
   language: string = "en",
-  studentName: string = "Student"
+  studentName: string = "Student",
+  customOrigin?: string
 ) {
-  const { phoneNumber, appUrl, accountSid } = getTwilioConfig();
+  const { phoneNumber } = getTwilioConfig();
+  const appUrl = getResolvedAppUrl(customOrigin);
 
   if (!isTwilioConfigured()) {
     throw new Error(
@@ -72,14 +98,9 @@ export async function triggerOutboundCall(
 
   const client = getTwilioClient();
 
-  // If running locally on localhost:3000, Twilio cloud servers cannot reach localhost without a tunnel (like ngrok).
-  // When a public URL (ngrok, vercel, etc.) is set in APP_URL or NEXT_PUBLIC_APP_URL, we use our full interactive webhook.
-  const isPublicUrl = appUrl.startsWith("https://") && !appUrl.includes("localhost");
-  const webhookUrl = isPublicUrl
-    ? `${appUrl}/api/twilio/voice/welcome?topic=${encodeURIComponent(
-        topic
-      )}&lang=${encodeURIComponent(language)}&name=${encodeURIComponent(studentName)}`
-    : `https://demo.twilio.com/docs/voice.xml`;
+  const webhookUrl = `${appUrl}/api/twilio/voice/welcome?topic=${encodeURIComponent(
+    topic
+  )}&lang=${encodeURIComponent(language)}&name=${encodeURIComponent(studentName)}`;
 
   try {
     const call = await client.calls.create({
@@ -93,6 +114,7 @@ export async function triggerOutboundCall(
       status: call.status,
       to: formattedTo,
       from: phoneNumber,
+      webhookUrl,
     };
   } catch (err: any) {
     if (err.code === 573002 || err.code === 21215) {
