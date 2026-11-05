@@ -35,6 +35,19 @@ export function getTwilioClient() {
   return twilio(accountSid, authToken);
 }
 
+export function formatE164(phone: string): string {
+  let cleaned = (phone || "").replace(/[\s\-\(\)]/g, "");
+  if (!cleaned) return "";
+  if (!cleaned.startsWith("+")) {
+    if (cleaned.length === 10) {
+      cleaned = "+91" + cleaned;
+    } else {
+      cleaned = "+" + cleaned;
+    }
+  }
+  return cleaned;
+}
+
 /**
  * Triggers a real telephone call to a student's phone via Twilio REST API.
  */
@@ -48,14 +61,19 @@ export async function triggerOutboundCall(
 
   if (!isTwilioConfigured()) {
     throw new Error(
-      "Twilio credentials are not configured in .env.local."
+      "Twilio credentials are not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER."
     );
+  }
+
+  const formattedTo = formatE164(toPhoneNumber);
+  if (!formattedTo || formattedTo.length < 8) {
+    throw new Error("Invalid phone number. Please enter a valid 10-digit mobile number (e.g. +91 8328004967).");
   }
 
   const client = getTwilioClient();
 
   // If running locally on localhost:3000, Twilio cloud servers cannot reach localhost without a tunnel (like ngrok).
-  // When a public URL (ngrok, vercel, etc.) is set in NEXT_PUBLIC_APP_URL, we use our full interactive webhook.
+  // When a public URL (ngrok, vercel, etc.) is set in APP_URL or NEXT_PUBLIC_APP_URL, we use our full interactive webhook.
   const isPublicUrl = appUrl.startsWith("https://") && !appUrl.includes("localhost");
   const webhookUrl = isPublicUrl
     ? `${appUrl}/api/twilio/voice/welcome?topic=${encodeURIComponent(
@@ -65,7 +83,7 @@ export async function triggerOutboundCall(
 
   try {
     const call = await client.calls.create({
-      to: toPhoneNumber,
+      to: formattedTo,
       from: phoneNumber,
       url: webhookUrl,
     });
@@ -73,14 +91,20 @@ export async function triggerOutboundCall(
     return {
       callSid: call.sid,
       status: call.status,
-      to: toPhoneNumber,
+      to: formattedTo,
       from: phoneNumber,
     };
   } catch (err: any) {
     if (err.code === 573002 || err.code === 21215) {
       throw new Error(
-        `Twilio Trial Notice: The phone number "${toPhoneNumber}" must be verified first. In your Twilio Console, go to Phone Numbers > Verified Caller IDs and add this number to receive live calls.`
+        `Twilio Trial Notice: The phone number "${formattedTo}" must be verified first in your Twilio Console > Verified Caller IDs.`
       );
+    }
+    if (err.code === 21211) {
+      throw new Error(`The phone number "${formattedTo}" is not formatted properly. Please check your number.`);
+    }
+    if (err.code === 20003) {
+      throw new Error("Twilio account has insufficient balance to place live calls.");
     }
     throw err;
   }

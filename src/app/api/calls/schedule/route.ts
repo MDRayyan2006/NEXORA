@@ -104,6 +104,14 @@ export async function POST(req: NextRequest) {
       message: `Daily call scheduled for ${storedSchedule.preferredTime}! The AI auto-dialer will call ${storedSchedule.phoneNumber} every day.`,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    console.error("Scheduled call error:", err);
+    return NextResponse.json(
+      {
+        success: false,
+        message: err.message || "Failed to place call via Twilio.",
+        error: err.message,
+      },
+      { status: 200 }
+    );
   }
 }

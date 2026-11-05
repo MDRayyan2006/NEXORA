@@ -116,18 +116,18 @@ export default function CallTutorPage() {
       if (res.ok && data.success) {
         setRealCallMsg({
           success: true,
-          text: `📞 Scheduled AI call placed to ${phoneNumber}! Answer your phone to begin your lesson and test.`,
+          text: data.message || `📞 Scheduled AI call placed to ${phoneNumber}! Answer your phone to begin your lesson and test.`,
         });
       } else {
         setRealCallMsg({
           success: false,
-          text: data.message || "Failed to trigger scheduled call.",
+          text: data.message || data.error || "Failed to trigger scheduled call.",
         });
       }
     } catch (err: any) {
       setRealCallMsg({
         success: false,
-        text: "Could not trigger scheduled call.",
+        text: err?.message || "Could not trigger scheduled call.",
       });
     } finally {
       setPlacingRealCall(false);
