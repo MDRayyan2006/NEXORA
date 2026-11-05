@@ -10,6 +10,7 @@ import { SUPPORTED_LANGUAGES, LanguageCode } from "@/lib/i18n";
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: "🏠", label: "Skills Dashboard", badge: "Overview" },
+  { href: "/skills", icon: "🕸️", label: "Knowledge Graph & XP", badge: "Skills" },
   { href: "/call-tutor", icon: "📞", label: "AI Phone Call Tutor", badge: "Live" },
   { href: "/whatsapp", icon: "💬", label: "WhatsApp Assistant", badge: "24/7" },
   { href: "/learn", icon: "📚", label: "Videos & Textbooks", badge: "Materials" },
